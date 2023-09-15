@@ -44,6 +44,7 @@ $JobResult = [PSCustomObject]@{
     Warning  = 0
     Error    = 0
     VMCount  = 0
+    Quota    = 0
     Used     = 0
     Free     = 0
     FreePerc = 0
@@ -79,6 +80,16 @@ function Set-XMLContent {
     $result+=   "<result>" + $nl
     $result+=   "  <channel>Anzahl VMs</channel>" + $nl
     $result+=   "  <value>$($JobResult.VMCount)</value>" + $nl
+    $result+=   "  <showChart>1</showChart>" + $nl
+    $result+=   "  <showTable>1</showTable>" + $nl
+    $result+=   "</result>" + $nl
+
+    $result+=   "<result>" + $nl
+    $result+=   "  <channel>Quota</channel>" + $nl
+    $result+=   "  <value>$($JobResult.Quota)</value>" + $nl
+    $result+=   "  <Float>1</Float>" + $nl
+    $result+=   "  <DecimalMode>Auto</DecimalMode>" + $nl
+    $result+=   "  <CustomUnit>GB</CustomUnit>" + $nl
     $result+=   "  <showChart>1</showChart>" + $nl
     $result+=   "  <showTable>1</showTable>" + $nl
     $result+=   "</result>" + $nl
@@ -125,9 +136,9 @@ function Set-XMLContent {
     $result+=   "  <showChart>1</showChart>" + $nl
     $result+=   "  <showTable>1</showTable>" + $nl
     $result+=   "  <LimitMaxWarning>$WarningLevel</LimitMaxWarning>" + $nl
-    $result+=   "  <LimitWarningMsg>Backup-Job &#228;lter als 24h</LimitWarningMsg>" + $nl
+    $result+=   "  <LimitWarningMsg>Backup-Job älter als 24h</LimitWarningMsg>" + $nl
     $result+=   "  <LimitMaxError>$ErrorLevel</LimitMaxError>" + $nl
-    $result+=   "  <LimitErrorMsg>Backup-Job &#228;lter als 36h</LimitErrorMsg>" + $nl
+    $result+=   "  <LimitErrorMsg>Backup-Job älter als 36h</LimitErrorMsg>" + $nl
     $result+=   "  <LimitMode>1</LimitMode>" + $nl
     $result+=   "</result>" + $nl
 
@@ -166,9 +177,15 @@ function Get-Resources {
         $Job
     )
 
-    $JobResult.Used     = [Math]::Round($Job.Resources.UsedSpace/1KB,1)
-    $JobResult.Free     = [Math]::Round(($Job.Resources.RepositoryQuota - $Job.Resources.UsedSpace)/1KB,1)
-    $JobResult.FreePerc = [Math]::Round((100 - $Job.Resources.UsedSpacePercentage),1)
+    $JobResult.Quota    = 0
+    $JobResult.Used     = 0
+    $JobResult.Free     = 0
+    $JobResult.FreePerc = 0
+
+    if ($Job.Resources.RepositoryQuota)     {$JobResult.Quota    = [Math]::Round($Job.Resources.RepositoryQuota/1KB,1)}
+    if ($Job.Resources.UsedSpace)           {$JobResult.Used     = [Math]::Round($Job.Resources.UsedSpace/1KB,1)}
+    if ($Job.Resources.UsedSpace)           {$JobResult.Free     = [Math]::Round(($Job.Resources.RepositoryQuota - $Job.Resources.UsedSpace)/1KB,1)}
+    if ($Job.Resources.UsedSpacePercentage) {$JobResult.FreePerc = [Math]::Round((100 - $Job.Resources.UsedSpacePercentage),1)}
 
     Return $JobResult
 
