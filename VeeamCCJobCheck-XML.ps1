@@ -27,7 +27,6 @@
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 # General parameters
-$UpdatePath       = ""
 $nl               = [Environment]::NewLine
 $resultFolder     = "C:\Temp\VeeamResults"
 
@@ -161,18 +160,24 @@ function Get-JobState {
     $JobResult.Name    = $Job.Name
     $JobResult.Desc    = $Job.Description
     $JobResult.VMCount = $Job.VMCount
-    $JobResult.LastJob = [Math]::Round((New-TimeSpan -Start $Job.LastActive -End (Get-Date)).TotalHours,0)
+    if (-not $Job.LastResult) {
+        $JobResult.LastJob = 0
+    }
+    else {
+        $JobResult.LastJob = [Math]::Round((New-TimeSpan -Start $Job.LastActive -End (Get-Date)).TotalHours,0)
+    }
     
     # Get job results and define result parameters
     if     ($Job.LastResult -eq "Success") { $JobResult.Value = 1; $JobResult.Warning = 0; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) erfolgreich" }
     elseif ($Job.LastResult -eq "Warning") { $JobResult.Value = 2; $JobResult.Warning = 1; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) Warnung. Bitte prüfen" }
     elseif ($Job.LastResult -eq "Failed")  { $JobResult.Value = 3; $JobResult.Warning = 0; $JobResult.Error = 1; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) fehlerhaft" }
-    elseif ($JobResult.LastJob -lt 6)      { $JobResult.Value = 2; $JobResult.Warning = 1; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) läuft" }
+    elseif (-not $Job.LastResult)          { $JobResult.Value = 2; $JobResult.Warning = 1; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) läuft noch" }
     else                                   { $JobResult.Value = 3; $JobResult.Warning = 0; $JobResult.Error = 1; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) unbekannter Fehler" }
 
     Return $JobResult
 }
 
+# Get session details
 function Get-Resources {
     param (
         $Job
@@ -191,54 +196,8 @@ function Get-Resources {
     Return $JobResult
 
 }
-
-# Update Script
-function Get-NewScript {
-
-    # Check if Update-Script is reachable
-    $StatusCode = Invoke-WebRequest $UpdatePath -UseBasicParsing | ForEach-Object {$_.StatusCode}
-    $CurrentScript = $PSCommandPath
-
-    if ($StatusCode -eq 200 ) {
-
-        # Parse version string of script on github
-        $UpdateScriptcontent = (Invoke-webrequest -URI $UpdatePath -UseBasicParsing).Content
-        $newversionstring    = ($UpdateScriptcontent | Select-String "Version :.*" | Select-Object -First 1).Matches.Value
-        $newversion          = $newversionstring -replace '[^0-9"."]',''
-
-        # Parse version string of current script
-        $CurrentScriptContent = Get-Content -Path $PSCommandPath -Encoding UTF8 -Raw
-        $currentversionstring = ($CurrentScriptContent | Select-String "Version :.*" | Select-Object -First 1).Matches.Value
-        $currentversion       = $currentversionstring -replace '[^0-9"."]',''
-
-        # Replace and re-run script if update-script is newer
-        if ([version]$newversion -gt [version]$currentversion) {
-
-            # Create temp directory if it does not exists
-            $tmpdirectory = "C:\Temp"
-            if(-not (test-path $tmpdirectory)){ New-Item -Path $tmpdirectory -ItemType Directory }
-
-            # Create a temporary file with content of the new script
-            $tempfile = "$tmpdirectory\update-script.new"
-            Invoke-WebRequest -URI $UpdatePath -outfile $tempfile
-
-            # Replace current script
-            $content = Get-Content $tempfile -Encoding utf8 -raw
-            $content | Set-Content $CurrentScript -encoding UTF8
-
-            # Remove temporary file
-            Remove-Item $tempfile
-
-            # Call new script
-            &$CurrentScript $script:args
-        }
-    }
-}
-
 #-----------------------------------------------------------[Execute]------------------------------------------------------------
 # Autouptade Script
-# Get-NewScript
-
 # Get Backup Jobs 
 $Tenants = Get-VBRCloudTenant | where-object { $_.Enabled -eq $true }
 
