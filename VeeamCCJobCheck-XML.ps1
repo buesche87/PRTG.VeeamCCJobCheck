@@ -162,12 +162,13 @@ function Get-JobState {
     $JobResult.Desc    = $Job.Description
     $JobResult.VMCount = $Job.VMCount
     $JobResult.LastJob = [Math]::Round((New-TimeSpan -Start $Job.LastActive -End (Get-Date)).TotalHours,0)
-
+    
     # Get job results and define result parameters
     if     ($Job.LastResult -eq "Success") { $JobResult.Value = 1; $JobResult.Warning = 0; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) erfolgreich" }
-    elseif ($Job.LastResult -eq "Warning") { $JobResult.Value = 2; $JobResult.Warning = 1; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc)  Warnung. Bitte pr&#252;fen" }
-    elseif ($Job.LastResult -eq "Failed")  { $JobResult.Value = 3; $JobResult.Warning = 0; $JobResult.Error = 1; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc)  fehlerhaft" }
-    else                                   { $JobResult.Value = 3; $JobResult.Warning = 0; $JobResult.Error = 1; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc)  unbekannter Fehler" }
+    elseif ($Job.LastResult -eq "Warning") { $JobResult.Value = 2; $JobResult.Warning = 1; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) Warnung. Bitte prüfen" }
+    elseif ($Job.LastResult -eq "Failed")  { $JobResult.Value = 3; $JobResult.Warning = 0; $JobResult.Error = 1; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) fehlerhaft" }
+    elseif ($JobResult.LastJob -lt 6)      { $JobResult.Value = 2; $JobResult.Warning = 1; $JobResult.Error = 0; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) läuft" }
+    else                                   { $JobResult.Value = 3; $JobResult.Warning = 0; $JobResult.Error = 1; $JobResult.Text = "BackupJob $($JobResult.Name) - $($JobResult.Desc) unbekannter Fehler" }
 
     Return $JobResult
 }
