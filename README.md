@@ -1,6 +1,6 @@
 # PRTG.VeeamCCJobCheck
 
-This is a PRTG Sensor that checks all acive Tenants in Veeam Cloud Connect
+This is a PRTG Sensor that checks all active Tenants in Veeam Cloud Connect
 
 The XML part is meant to be scheduled on the host where executed the script creates a PRTG formatted XML-file in ```C:\Temp\VeeamResults```
 
